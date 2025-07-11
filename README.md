@@ -1,73 +1,93 @@
-# Welcome to your Lovable project
+# 💼 Srishankar Lokanath - Portfolio Website
 
-## Project info
+Welcome to my personal portfolio! This website showcases my work, projects, and experience as a **Data Analyst & Business Analyst**. Built with modern frontend tools and integrated email functionality, it’s a one-stop destination to explore what I do.
 
-**URL**: https://lovable.dev/projects/af93a797-bbe1-4a94-a2f6-65a3d3dd7e5d
+---
 
-## How can I edit this code?
+## 🔍 Overview
 
-There are several ways of editing your application.
+- **Name:** Srishankar Lokanath  
+- **Role:** Data Analyst & Business Analyst  
+- **Skills:** Python, SQL, Power BI, Excel, Flask, HTML/CSS  
+- **Live Site:** [Visit Website](https://your-portfolio-url.netlify.app)
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/af93a797-bbe1-4a94-a2f6-65a3d3dd7e5d) and start prompting.
+## 🚀 Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend:** React + Vite + TypeScript + Tailwind CSS
+- **Animations & UI:** Lucide Icons, ShadCN UI, Framer Motion
+- **Email Service:** EmailJS (with auto-reply support)
+- **Deployment:** Netlify
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 📁 Features
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Hero section with animated background and smooth scroll
+- Projects section showcasing real-world data and analytics projects
+- Contact form with EmailJS integration and instant feedback via toast
+- Responsive design for all screen sizes
+- Environment variable support for safe configuration
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📸 Project Screenshots
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+| Hero Section             | Project Showcase           |
+|--------------------------|-----------------------------|
+| ![Hero](https://i.ibb.co/cKD17Tst/wmremove-transformed-removebg-preview.png) | ![Projects](https://i.postimg.cc/h496dhbt/Screenshot-2025-07-11-210259.png) |
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 📬 Contact
+
+Want to collaborate or have a project in mind?
+
+- 📧 Email: [srishankarloknath@gmail.com](mailto:srishankarloknath@gmail.com)
+- 🌐 LinkedIn: [LinkedIn Profile](https://www.linkedin.com/in/srishankar-lokanath-99a5b4252/)
+- 💻 GitHub: [Srishankar123](https://github.com/Srishankar123)
+
+---
+
+## 🛠️ Getting Started Locally
+
+1. **Clone this repo:**
+
+   ```bash
+   git clone https://github.com/Srishankar123/portfolio.git
+   cd portfolio
+Install dependencies:
+
+bash
+Copy
+Edit
+npm install
+Set up .env file:
+
+Create a .env file and add your EmailJS keys:
+
+ini
+Copy
+Edit
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ID=your_template_id
+VITE_EMAILJS_REPLY_TEMPLATE_ID=your_reply_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+Run locally:
+
+bash
+Copy
+Edit
 npm run dev
-```
+🌐 Deployment
+The site is deployed using Netlify. Make sure to set all environment variables in your Netlify settings under Site > Settings > Environment Variables.
 
-**Edit a file directly in GitHub**
+📄 License
+This project is for personal and educational use. You are welcome to fork and customize it with credit.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+vbnet
+Copy
+Edit
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/af93a797-bbe1-4a94-a2f6-65a3d3dd7e5d) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Let me know if you'd like this tailored for your **GitHub Pages** or to include project-specific GIFs or additional badges.
