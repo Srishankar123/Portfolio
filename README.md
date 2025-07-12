@@ -36,8 +36,8 @@ Welcome to my personal portfolio! This website showcases my work, projects, and 
 
 | Hero Section             | Project Showcase           |
 |--------------------------|-----------------------------|
-| ![Hero](https://i.ibb.co/cKD17Tst/wmremove-transformed-removebg-preview.png) | ![Projects](<img width="1891" height="910" alt="image" src="https://github.com/user-attachments/assets/fd4ba28a-1a32-4efc-b121-d43b6056c326" />
-) |
+| ![Hero](https://i.ibb.co/cKD17Tst/wmremove-transformed-removebg-preview.png) | <img width="1891" height="910" alt="image" src="https://github.com/user-attachments/assets/fd4ba28a-1a32-4efc-b121-d43b6056c326" />
+) 
 
 ---
 
