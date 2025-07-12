@@ -9,7 +9,7 @@ Welcome to my personal portfolio! This website showcases my work, projects, and 
 - **Name:** Srishankar Lokanath  
 - **Role:** Data Analyst & Business Analyst  
 - **Skills:** Python, SQL, Power BI, Excel, Flask, HTML/CSS  
-- **Live Site:** [Visit Website](https://your-portfolio-url.netlify.app)
+- **Live Site:** [Visit Website](https://srishankar.netlify.app/)
 
 ---
 
