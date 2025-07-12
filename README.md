@@ -53,42 +53,55 @@ Want to collaborate or have a project in mind?
 
 ## 🛠️ Getting Started Locally
 
-1. **Clone this repo:**
+To run this project on your local machine:
 
-   ```bash
-   git clone https://github.com/Srishankar123/portfolio.git
-   cd portfolio
-Install dependencies:
-
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Srishankar123/portfolio.git
+cd portfolio
+2. Install Dependencies
 bash
 Copy
 Edit
 npm install
-Set up .env file:
+3. Set Up Environment Variables
+Create a .env file in the root directory and add the following variables:
 
-Create a .env file and add your EmailJS keys:
-
-ini
+env
 Copy
 Edit
 VITE_EMAILJS_SERVICE_ID=your_service_id
 VITE_EMAILJS_TEMPLATE_ID=your_template_id
 VITE_EMAILJS_REPLY_TEMPLATE_ID=your_reply_template_id
 VITE_EMAILJS_PUBLIC_KEY=your_public_key
-Run locally:
-
+4. Run Locally
 bash
 Copy
 Edit
 npm run dev
 🌐 Deployment
-The site is deployed using Netlify. Make sure to set all environment variables in your Netlify settings under Site > Settings > Environment Variables.
+This portfolio is deployed using Netlify.
+
+To deploy:
+
+Push your code to GitHub.
+
+Connect your repository to Netlify.
+
+Add the same environment variables in Netlify under:
+Site > Settings > Environment Variables
 
 📄 License
-This project is for personal and educational use. You are welcome to fork and customize it with credit.
+This project is intended for personal and educational use.
+You're welcome to fork, customize, and use it with appropriate credit.
 
-vbnet
-Copy
-Edit
+📬 Get in Touch
+Thanks for visiting my portfolio!
 
-Let me know if you'd like this tailored for your **GitHub Pages** or to include project-specific GIFs or additional badges.
+🔗 LinkedIn
+
+💻 GitHub
+
+📧 srishankarloknath@gmail.com
+
+Looking forward to connecting or collaborating! 😊
