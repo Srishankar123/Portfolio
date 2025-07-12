@@ -1,4 +1,4 @@
-# 💼 Personal Developer Portfolio
+# 💼 Personal Data Analyst Or Business Analyst Portfolio
 
 A modern and responsive developer portfolio website built using React and deployed on Netlify.
 
