@@ -80,7 +80,7 @@ You're welcome to fork, customize, and use it with credit.
 Thanks for visiting my portfolio!
 
 - 🔗 [Portfolio](https://srishankar.netlify.app)
-- 💼 [LinkedIn](https://www.linkedin.com/in/srishankar-lokanath/)
+- 💼 [LinkedIn](https://linkedin.com/in/srishankar-lokanath-99a5b4252)
 - 💻 [GitHub](https://github.com/Srishankar123)
 - 📧 srishankarloknath@gmail.com
 
