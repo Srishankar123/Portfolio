@@ -80,8 +80,9 @@ bash
 Copy
 Edit
 npm run dev
-### 🌐 Deployment
+🌐 Deployment
 This portfolio is deployed using Netlify.
+
 To deploy your own version:
 
 Push your code to GitHub.
@@ -96,7 +97,7 @@ Edit
 Site Settings → Build & deploy → Environment
 Add the same environment variables used in .env.
 
-### 📄 License
+📄 License
 This project is for personal and educational use.
 You're welcome to fork, customize, and use it with credit.
 
@@ -110,20 +111,3 @@ Thanks for visiting my portfolio!
 💻 GitHub
 
 📧 srishankarloknath@gmail.com
-
-Looking forward to connecting! 😊
-
-yaml
-Copy
-Edit
-
----
-
-✅ Copy and paste the content above into your `README.md` file and commit it to your repo. It will display with proper boxes, code formatting, and structure just like [said7388/developer-portfolio](https://github.com/said7388/developer-portfolio).
-
-Let me know if you'd also like to add:
-
-- Shields/badges
-- A "Tech Stack" section
-- Screenshots
-- GitHub Pages deployment instructions instead of Netlify
