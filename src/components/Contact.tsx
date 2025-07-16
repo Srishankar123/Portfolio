@@ -1,5 +1,4 @@
-import { useState } from "react";
-import emailjs from "@emailjs/browser";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,52 +14,106 @@ const Contact = () => {
     email: "",
     subject: "",
     message: "",
+    website: "",
+    otp: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleSendOtp = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      const data = await res.json();
+
+      // 🎣 Handle prank redirect (Rickroll)
+      if (res.status === 403 && data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
+
+      if (res.ok) {
+        toast({ title: "OTP sent", description: "Check your inbox (and spam)." });
+        setOtpSent(true);
+        setResendCooldown(60);
+      } else {
+        toast({ title: "Error", description: data.message || "Could not send OTP", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Server unreachable", variant: "destructive" });
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, otp: formData.otp }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        toast({ title: "OTP verified", description: "You may now submit the form." });
+        setOtpVerified(true);
+      } else {
+        toast({ title: "OTP failed", description: data.message || "Invalid or expired OTP", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "OTP verification failed", variant: "destructive" });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!otpVerified) {
+      toast({ title: "OTP Required", description: "Please verify OTP before sending.", variant: "destructive" });
+      return;
+    }
 
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
-    const replyTemplateId = import.meta.env.VITE_EMAILJS_REPLY_TEMPLATE_ID;
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+    try {
+      const res = await fetch("http://localhost:5000/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    const templateParams = {
-      name: formData.name,
-      email: formData.email,
-      title: formData.subject,
-      message: formData.message,
-      time: new Date().toLocaleString(),
-    };
+      const data = await res.json();
 
-    // First, send email to self
-    emailjs
-      .send(serviceId, templateId, templateParams, publicKey)
-      .then(() => {
-        // Then send auto-reply
-        return emailjs.send(serviceId, replyTemplateId, templateParams, publicKey);
-      })
-      .then(() => {
+      if (res.ok) {
         toast({
           title: "Message sent!",
-          description: "Thank you for reaching out to Srishankar. I'll get back to you soon.",
+          description:
+            "Thanks for reaching out. I’ll reply soon. Check your spam folder if needed.",
         });
-        setFormData({ name: "", email: "", subject: "", message: "" });
-      })
-      .catch(() => {
-        toast({
-          title: "Failed to send",
-          description: "Something went wrong. Please try again later.",
-          variant: "destructive",
-        });
-      });
+        setFormData({ name: "", email: "", subject: "", message: "", website: "", otp: "" });
+        setOtpSent(false);
+        setOtpVerified(false);
+        setResendCooldown(0);
+      } else {
+        toast({ title: "Failed to send", description: data.message || "Something went wrong", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Could not send message", variant: "destructive" });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const contactInfo = [
@@ -89,27 +142,19 @@ const Contact = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16 animate-fade-in">
           <h2 className="text-4xl lg:text-5xl font-bold mb-6">
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
-              Let's Work Together
-            </span>
+            <span className="bg-gradient-primary bg-clip-text text-transparent">Let's Work Together</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Have a project in mind? I'd love to hear about it.
-            Let's discuss how we can bring your ideas to life.
+            Have a project in mind? I'd love to hear about it. Let's discuss how we can bring your ideas to life.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-12">
-          {/* Contact Info */}
           <div className="space-y-8 animate-slide-in-left">
-            <div>
-              <h3 className="text-2xl font-semibold text-foreground mb-6">Get in Touch</h3>
-              <p className="text-muted-foreground mb-8">
-                I'm always open to discussing new opportunities,
-                interesting projects, or just having a chat about technology.
-              </p>
-            </div>
-
+            <h3 className="text-2xl font-semibold text-foreground mb-6">Get in Touch</h3>
+            <p className="text-muted-foreground mb-8">
+              I'm always open to discussing new opportunities, interesting projects, or just having a chat about technology.
+            </p>
             <div className="space-y-6">
               {contactInfo.map((info, index) => (
                 <Card
@@ -117,13 +162,8 @@ const Contact = () => {
                   className="p-4 bg-gradient-card backdrop-blur-sm border-border/30 hover:border-primary/30 transition-all duration-300 group"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
-                  <a
-                    href={info.link}
-                    className="flex items-center gap-4 text-foreground hover:text-primary transition-colors"
-                  >
-                    <div className="text-primary group-hover:scale-110 transition-transform">
-                      {info.icon}
-                    </div>
+                  <a href={info.link} className="flex items-center gap-4 text-foreground hover:text-primary transition-colors">
+                    <div className="text-primary group-hover:scale-110 transition-transform">{info.icon}</div>
                     <div>
                       <p className="font-medium">{info.title}</p>
                       <p className="text-sm text-muted-foreground">{info.value}</p>
@@ -134,71 +174,52 @@ const Contact = () => {
             </div>
           </div>
 
-          {/* Contact Form */}
           <div className="lg:col-span-2 animate-slide-in-right">
             <Card className="p-8 bg-gradient-card backdrop-blur-sm border-border/30">
               <form onSubmit={handleSubmit} className="space-y-6">
+                <input type="text" name="website" value={formData.website} onChange={handleChange} style={{ display: "none" }} autoComplete="off" />
+
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Your name"
-                      required
-                      className="bg-background/50 border-border/50 focus:border-primary/50"
-                    />
+                    <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="your.email@example.com"
-                      required
-                      className="bg-background/50 border-border/50 focus:border-primary/50"
-                    />
+                    <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} required />
                   </div>
                 </div>
 
+                {otpSent && !otpVerified && (
+                  <div className="space-y-2">
+                    <Label htmlFor="otp">Enter OTP</Label>
+                    <Input id="otp" name="otp" value={formData.otp} onChange={handleChange} />
+                    <div className="flex gap-2">
+                      <Button type="button" onClick={handleVerifyOtp}>Verify OTP</Button>
+                      <Button type="button" variant="outline" onClick={handleSendOtp} disabled={resendCooldown > 0}>
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!otpSent && (
+                  <div className="space-y-2">
+                    <Button type="button" onClick={handleSendOtp}>Send OTP</Button>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    placeholder="What's this about?"
-                    required
-                    className="bg-background/50 border-border/50 focus:border-primary/50"
-                  />
+                  <Input id="subject" name="subject" value={formData.subject} onChange={handleChange} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    placeholder="Tell me about your project..."
-                    required
-                    rows={6}
-                    className="bg-background/50 border-border/50 focus:border-primary/50 resize-none"
-                  />
+                  <Textarea id="message" name="message" value={formData.message} onChange={handleChange} rows={6} required />
                 </div>
 
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full group"
-                >
+                <Button type="submit" variant="hero" size="lg" className="w-full group">
                   Send Message
                   <Send className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
