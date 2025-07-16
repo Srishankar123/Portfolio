@@ -22,6 +22,8 @@ const Contact = () => {
   const [otpVerified, setOtpVerified] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  const API_BASE = "https://portfolio-backend-mlji.onrender.com";
+
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
@@ -31,7 +33,7 @@ const Contact = () => {
 
   const handleSendOtp = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/send-otp", {
+      const res = await fetch(`${API_BASE}/api/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
@@ -39,7 +41,6 @@ const Contact = () => {
 
       const data = await res.json();
 
-      // 🎣 Handle prank redirect (Rickroll)
       if (res.status === 403 && data.redirect) {
         window.location.href = data.redirect;
         return;
@@ -59,7 +60,7 @@ const Contact = () => {
 
   const handleVerifyOtp = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/verify-otp", {
+      const res = await fetch(`${API_BASE}/api/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp: formData.otp }),
@@ -86,7 +87,7 @@ const Contact = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/contact", {
+      const res = await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -97,8 +98,7 @@ const Contact = () => {
       if (res.ok) {
         toast({
           title: "Message sent!",
-          description:
-            "Thanks for reaching out. I’ll reply soon. Check your spam folder if needed.",
+          description: "Thanks for reaching out. I’ll reply soon. Check your spam folder if needed.",
         });
         setFormData({ name: "", email: "", subject: "", message: "", website: "", otp: "" });
         setOtpSent(false);
