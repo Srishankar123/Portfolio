@@ -146,6 +146,12 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
+// 🛠️ Keep-alive ping route for uptime monitoring (Render/UptimeRobot)
+app.get("/ping", (req, res) => {
+  res.status(200).send("pong");
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend server running on http://localhost:${PORT}`);
 });
+
