@@ -13,19 +13,19 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// 🛠️ In-memory stores (use Redis/db in production)
+// 🛠️ In-memory stores (temporary, not persistent)
 const otpStore = {};
 const abuseTracker = {};
-const otpEmailTracker = {}; // Changed from IP to email-based rate limiting
+const otpEmailTracker = {}; // Rate limit tracking by email
 
-// 🔒 Protected emails
+// 🔒 Protected/test emails
 const protectedEmails = [
-  process.env.EMAIL_FROM.toLowerCase(),
+  process.env.EMAIL_FROM?.toLowerCase(),
   "srishankarloknath@gmail.com",
   "srishankar.12a@gmail.com",
 ];
 
-// 🛡️ Contact form limiter — max 3 messages per day per IP
+// 🛡️ Contact form limiter — max 3 per day per IP
 const contactLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 3,
@@ -33,7 +33,7 @@ const contactLimiter = rateLimit({
 });
 app.use("/api/contact", contactLimiter);
 
-// 📧 Nodemailer config
+// 📧 SMTP config
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -44,7 +44,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 📤 Send OTP with email-based rate limit
+// 📤 Send OTP — email-based rate limiting
 app.post("/api/send-otp", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required." });
@@ -52,33 +52,34 @@ app.post("/api/send-otp", async (req, res) => {
   const lowerEmail = email.toLowerCase();
   const now = Date.now();
 
-  // ⛔ Reject protected emails
+  // ⛔ Block protected/test emails
   if (protectedEmails.includes(lowerEmail)) {
-    const count = abuseTracker[lowerEmail] || 0;
-    abuseTracker[lowerEmail] = count + 1;
+    abuseTracker[lowerEmail] = (abuseTracker[lowerEmail] || 0) + 1;
 
     if (abuseTracker[lowerEmail] >= 2) {
       return res.status(403).json({
         message: "Redirecting...",
-        redirect: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        redirect: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // 😎
       });
     }
 
     return res.status(403).json({ message: "Nice try, Diddy! 😎" });
   }
 
-  // 🔄 Clean up old timestamps
+  // 🔁 Clean up old OTP timestamps for this email
   if (!otpEmailTracker[lowerEmail]) otpEmailTracker[lowerEmail] = [];
-  otpEmailTracker[lowerEmail] = otpEmailTracker[lowerEmail].filter(ts => now - ts < 60 * 60 * 1000);
+  otpEmailTracker[lowerEmail] = otpEmailTracker[lowerEmail].filter(
+    ts => now - ts < 60 * 60 * 1000
+  );
 
-  // ❌ Reject if more than 5 per hour
+  // ❌ Limit: 5 per hour
   if (otpEmailTracker[lowerEmail].length >= 5) {
     return res.status(429).json({
       message: "Too many OTPs sent to this email. Try again in 1 hour.",
     });
   }
 
-  // ⌛ Throttle resend to 1 per minute
+  // ⏳ Limit: 1 OTP per minute
   const existing = otpStore[lowerEmail];
   if (existing && now < existing.lastSent + 60 * 1000) {
     return res.status(429).json({
@@ -91,7 +92,7 @@ app.post("/api/send-otp", async (req, res) => {
   const expiresAt = now + 5 * 60 * 1000;
 
   otpStore[lowerEmail] = { otp, expiresAt, lastSent: now };
-  otpEmailTracker[lowerEmail].push(now); // Log this attempt
+  otpEmailTracker[lowerEmail].push(now);
 
   try {
     await transporter.sendMail({
@@ -103,7 +104,7 @@ app.post("/api/send-otp", async (req, res) => {
 
     return res.status(200).json({ message: "OTP sent successfully." });
   } catch (err) {
-    console.error("Failed to send OTP:", err);
+    console.error("❌ Failed to send OTP:", err);
     return res.status(500).json({ message: "Failed to send OTP" });
   }
 });
@@ -111,6 +112,8 @@ app.post("/api/send-otp", async (req, res) => {
 // ✅ Verify OTP
 app.post("/api/verify-otp", (req, res) => {
   const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ message: "Missing email or OTP." });
+
   const record = otpStore[email.toLowerCase()];
   if (!record) return res.status(400).json({ message: "No OTP found." });
   if (Date.now() > record.expiresAt) return res.status(400).json({ message: "OTP expired." });
@@ -127,10 +130,12 @@ app.post("/api/verify-otp", (req, res) => {
 app.post("/api/contact", async (req, res) => {
   const { name, email, subject, message, website } = req.body;
 
-  if (website && website.trim() !== "")
+  if (website?.trim() !== "")
     return res.status(400).json({ message: "Spam detected." });
+
   if (!name || !email || !subject || !message)
     return res.status(400).json({ message: "Missing required fields." });
+
   if (name.length > 100 || message.length > 1000)
     return res.status(400).json({ message: "Input too long." });
 
@@ -138,14 +143,22 @@ app.post("/api/contact", async (req, res) => {
     from: process.env.EMAIL_FROM,
     to: process.env.EMAIL_TO,
     subject: `[Portfolio] ${subject}`,
-    html: `<h3>New message from ${name}</h3><p><strong>Email:</strong> ${email}</p><p><strong>Subject:</strong> ${subject}</p><p><strong>Message:</strong><br/>${message}</p><hr/><small>Sent at ${new Date().toLocaleString()}</small>`,
+    html: `<h3>New message from ${name}</h3>
+           <p><strong>Email:</strong> ${email}</p>
+           <p><strong>Subject:</strong> ${subject}</p>
+           <p><strong>Message:</strong><br/>${message}</p>
+           <hr/><small>Sent at ${new Date().toLocaleString()}</small>`,
   };
 
   const toSender = {
     from: process.env.EMAIL_FROM,
     to: email,
     subject: `Thanks for reaching out, ${name}!`,
-    html: `<p>Hi ${name},</p><p>Thank you for contacting Srishankar! I’ve received your message and will reply soon.</p><p>If you don’t see a reply, please check Spam/Promotions.</p><blockquote>${message}</blockquote><p>Regards,<br/>Srishankar Lokanath</p>`,
+    html: `<p>Hi ${name},</p>
+           <p>Thank you for contacting Srishankar! I’ve received your message and will reply soon.</p>
+           <p>If you don’t see a reply, please check Spam/Promotions.</p>
+           <blockquote>${message}</blockquote>
+           <p>Regards,<br/>Srishankar Lokanath</p>`,
   };
 
   try {
@@ -158,7 +171,7 @@ app.post("/api/contact", async (req, res) => {
   }
 });
 
-// 🛠️ Keep-alive ping route
+// 🛠️ Keep-alive route
 app.get("/ping", (req, res) => {
   res.status(200).send("pong");
 });
