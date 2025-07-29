@@ -1,181 +1,98 @@
-// 📦 Dependencies
-import express from "express";
-import nodemailer from "nodemailer";
-import cors from "cors";
-import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
+const express = require('express');
+const nodemailer = require('nodemailer');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
 dotenv.config();
-
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-// 🛠️ In-memory stores (temporary, not persistent)
-const otpStore = {};
-const abuseTracker = {};
-const otpEmailTracker = {}; // Rate limit tracking by email
+// In-memory IP rate limiting store
+const otpRateLimitMap = new Map(); // IP -> { count, firstRequestTime }
+const MAX_OTP_PER_HOUR = 3;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-// 🔒 Protected/test emails
-const protectedEmails = [
-  process.env.EMAIL_FROM?.toLowerCase(),
-  "srishankarloknath@gmail.com",
-  "srishankar.12a@gmail.com",
-];
-
-// 🛡️ Contact form limiter — max 3 per day per IP
-const contactLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000,
-  max: 3,
-  message: "Too many contact requests. Please try again tomorrow.",
-});
-app.use("/api/contact", contactLimiter);
-
-// 📧 SMTP config
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-// 📤 Send OTP — email-based rate limiting
-app.post("/api/send-otp", async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ message: "Email is required." });
-
-  const lowerEmail = email.toLowerCase();
+// Rate limiter middleware
+function customOtpLimiter(req, res, next) {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.ip;
   const now = Date.now();
 
-  // ⛔ Block protected/test emails
-  if (protectedEmails.includes(lowerEmail)) {
-    abuseTracker[lowerEmail] = (abuseTracker[lowerEmail] || 0) + 1;
+  const record = otpRateLimitMap.get(ip);
 
-    if (abuseTracker[lowerEmail] >= 2) {
-      return res.status(403).json({
-        message: "Redirecting...",
-        redirect: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // 😎
-      });
-    }
-
-    return res.status(403).json({ message: "Nice try, Diddy! 😎" });
+  if (!record) {
+    otpRateLimitMap.set(ip, { count: 1, firstRequestTime: now });
+    return next();
   }
 
-  // 🔁 Clean up old OTP timestamps for this email
-  if (!otpEmailTracker[lowerEmail]) otpEmailTracker[lowerEmail] = [];
-  otpEmailTracker[lowerEmail] = otpEmailTracker[lowerEmail].filter(
-    ts => now - ts < 60 * 60 * 1000
-  );
+  const timePassed = now - record.firstRequestTime;
 
-  // ❌ Limit: 5 per hour
-  if (otpEmailTracker[lowerEmail].length >= 5) {
+  if (timePassed > RATE_LIMIT_WINDOW_MS) {
+    // Reset window
+    otpRateLimitMap.set(ip, { count: 1, firstRequestTime: now });
+    return next();
+  }
+
+  if (record.count >= MAX_OTP_PER_HOUR) {
     return res.status(429).json({
-      message: "Too many OTPs sent to this email. Try again in 1 hour.",
+      error: `Too many OTP requests from this IP. Please try again after ${Math.ceil(
+        (RATE_LIMIT_WINDOW_MS - timePassed) / 60000
+      )} minutes.`,
     });
   }
 
-  // ⏳ Limit: 1 OTP per minute
-  const existing = otpStore[lowerEmail];
-  if (existing && now < existing.lastSent + 60 * 1000) {
-    return res.status(429).json({
-      message: "OTP recently sent. Wait 1 minute before resending.",
-    });
-  }
+  record.count++;
+  otpRateLimitMap.set(ip, record);
+  next();
+}
 
-  // ✅ Generate and send OTP
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  const expiresAt = now + 5 * 60 * 1000;
+// Generate random 6-digit OTP
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
-  otpStore[lowerEmail] = { otp, expiresAt, lastSent: now };
-  otpEmailTracker[lowerEmail].push(now);
+// OTP route
+app.post('/api/send-otp', customOtpLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  const otp = generateOtp();
+
+  // You should store OTP in DB/session/cache to verify later
 
   try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,     // your email
+        pass: process.env.EMAIL_PASS,     // your app password
+      },
+    });
+
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM,
-      to: lowerEmail,
-      subject: "Your OTP Code",
-      html: `<p>Your OTP is <strong>${otp}</strong>. It will expire in 5 minutes.</p>`,
+      from: `"OTP Service" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Your OTP Code',
+      text: `Your OTP is ${otp}. It is valid for 5 minutes.`,
     });
 
-    return res.status(200).json({ message: "OTP sent successfully." });
-  } catch (err) {
-    console.error("❌ Failed to send OTP:", err);
-    return res.status(500).json({ message: "Failed to send OTP" });
+    return res.json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Email send error:', error);
+    return res.status(500).json({ error: 'Failed to send OTP' });
   }
 });
 
-// ✅ Verify OTP
-app.post("/api/verify-otp", (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ message: "Missing email or OTP." });
-
-  const record = otpStore[email.toLowerCase()];
-  if (!record) return res.status(400).json({ message: "No OTP found." });
-  if (Date.now() > record.expiresAt) return res.status(400).json({ message: "OTP expired." });
-
-  if (parseInt(otp) === record.otp) {
-    delete otpStore[email.toLowerCase()];
-    return res.status(200).json({ message: "OTP verified" });
-  } else {
-    return res.status(400).json({ message: "Invalid OTP" });
-  }
+// Root route
+app.get('/', (req, res) => {
+  res.send('OTP Service is running');
 });
 
-// ✉️ Contact form
-app.post("/api/contact", async (req, res) => {
-  const { name, email, subject, message, website } = req.body;
-
-  if (website?.trim() !== "")
-    return res.status(400).json({ message: "Spam detected." });
-
-  if (!name || !email || !subject || !message)
-    return res.status(400).json({ message: "Missing required fields." });
-
-  if (name.length > 100 || message.length > 1000)
-    return res.status(400).json({ message: "Input too long." });
-
-  const toOwner = {
-    from: process.env.EMAIL_FROM,
-    to: process.env.EMAIL_TO,
-    subject: `[Portfolio] ${subject}`,
-    html: `<h3>New message from ${name}</h3>
-           <p><strong>Email:</strong> ${email}</p>
-           <p><strong>Subject:</strong> ${subject}</p>
-           <p><strong>Message:</strong><br/>${message}</p>
-           <hr/><small>Sent at ${new Date().toLocaleString()}</small>`,
-  };
-
-  const toSender = {
-    from: process.env.EMAIL_FROM,
-    to: email,
-    subject: `Thanks for reaching out, ${name}!`,
-    html: `<p>Hi ${name},</p>
-           <p>Thank you for contacting Srishankar! I’ve received your message and will reply soon.</p>
-           <p>If you don’t see a reply, please check Spam/Promotions.</p>
-           <blockquote>${message}</blockquote>
-           <p>Regards,<br/>Srishankar Lokanath</p>`,
-  };
-
-  try {
-    await transporter.sendMail(toOwner);
-    await transporter.sendMail(toSender);
-    res.status(200).json({ message: "Emails sent successfully" });
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ message: "Failed to send emails" });
-  }
-});
-
-// 🛠️ Keep-alive route
-app.get("/ping", (req, res) => {
-  res.status(200).send("pong");
-});
-
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
