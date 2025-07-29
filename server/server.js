@@ -3,6 +3,7 @@ import express from "express";
 import nodemailer from "nodemailer";
 import cors from "cors";
 import dotenv from "dotenv";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
@@ -15,7 +16,7 @@ app.use(express.json());
 // 🛠️ In-memory stores (use Redis/db in production)
 const otpStore = {};
 const abuseTracker = {};
-const otpIPTracker = {}; // For custom IP-based rate limit
+const otpEmailTracker = {}; // Changed from IP to email-based rate limiting
 
 // 🔒 Protected emails
 const protectedEmails = [
@@ -25,7 +26,6 @@ const protectedEmails = [
 ];
 
 // 🛡️ Contact form limiter — max 3 messages per day per IP
-import rateLimit from "express-rate-limit";
 const contactLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 3,
@@ -44,13 +44,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// 📤 Send OTP with custom IP-based limiter
+// 📤 Send OTP with email-based rate limit
 app.post("/api/send-otp", async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required." });
 
   const lowerEmail = email.toLowerCase();
-  const ip = req.ip;
   const now = Date.now();
 
   // ⛔ Reject protected emails
@@ -61,25 +60,25 @@ app.post("/api/send-otp", async (req, res) => {
     if (abuseTracker[lowerEmail] >= 2) {
       return res.status(403).json({
         message: "Redirecting...",
-        redirect: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Rickroll 😎
+        redirect: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       });
     }
 
     return res.status(403).json({ message: "Nice try, Diddy! 😎" });
   }
 
-  // 🔄 Clean up old timestamps from tracker
-  if (!otpIPTracker[ip]) otpIPTracker[ip] = [];
-  otpIPTracker[ip] = otpIPTracker[ip].filter(ts => now - ts < 60 * 60 * 1000); // keep only last 1 hour
+  // 🔄 Clean up old timestamps
+  if (!otpEmailTracker[lowerEmail]) otpEmailTracker[lowerEmail] = [];
+  otpEmailTracker[lowerEmail] = otpEmailTracker[lowerEmail].filter(ts => now - ts < 60 * 60 * 1000);
 
-  // ❌ Reject if more than 5 attempts
-  if (otpIPTracker[ip].length >= 5) {
+  // ❌ Reject if more than 5 per hour
+  if (otpEmailTracker[lowerEmail].length >= 5) {
     return res.status(429).json({
-      message: "Too many OTP requests from this IP. Try again after 1 hour.",
+      message: "Too many OTPs sent to this email. Try again in 1 hour.",
     });
   }
 
-  // ⌛ Throttle resend to 1 per minute per email
+  // ⌛ Throttle resend to 1 per minute
   const existing = otpStore[lowerEmail];
   if (existing && now < existing.lastSent + 60 * 1000) {
     return res.status(429).json({
@@ -92,7 +91,7 @@ app.post("/api/send-otp", async (req, res) => {
   const expiresAt = now + 5 * 60 * 1000;
 
   otpStore[lowerEmail] = { otp, expiresAt, lastSent: now };
-  otpIPTracker[ip].push(now); // Log this attempt
+  otpEmailTracker[lowerEmail].push(now); // Log this attempt
 
   try {
     await transporter.sendMail({
